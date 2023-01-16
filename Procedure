@@ -1,0 +1,115 @@
+create or replace PROCEDURE d_bonus (
+    var_city     IN   customer.city%TYPE,
+    var_amount   IN   account.opening_balance%TYPE,
+    var_year     IN   NUMBER
+
+) AS
+     
+    invalid_year EXCEPTION;
+    invalid_bonus EXCEPTION;
+BEGIN
+                                                 
+    IF var_amount < 0 OR var_amount > 1000 then
+        RAISE invalid_bonus;
+    END IF;
+    IF var_year < 0 THEN
+        RAISE invalid_year;
+    END IF;
+    IF var_city IS NULL OR var_city = '' THEN
+       
+        UPDATE account a
+        SET
+            a.opening_balance = a.opening_balance + var_amount
+        WHERE
+            a.astatus = 'Active'
+            AND trunc(months_between(SYSDATE, a.aod)) > var_year * 12;
+        
+        
+   FOR cur IN (
+            SELECT
+                a.acnumber
+            FROM
+                account a
+            WHERE
+                a.astatus = 'Active'
+                AND trunc(months_between(SYSDATE, a.aod)) > var_year * 12
+        ) LOOP INSERT INTO demo_transdetails VALUES (
+            (
+                SELECT
+                    'T'
+                    || lpad(TO_CHAR(to_number(substr(MAX(tnumber), 2, 5)) + 1), 5, '0')
+                FROM
+                    demo_transdetails
+            ),
+            cur.acnumber,
+            SYSDATE,
+            'Wire Transfer',
+            'Deposit',
+            var_amount
+        );
+   
+
+        END LOOP;
+
+    ELSE
+        UPDATE account a
+        SET
+            a.opening_balance = a.opening_balance + var_amount
+        WHERE
+            a.astatus = 'Active'
+            AND trunc(months_between(SYSDATE, a.aod)) > var_year * 12
+            AND a.custid IN (
+                SELECT
+                    c.custid
+                FROM
+                    customer c
+                WHERE
+                    c.city = var_city
+            );
+           
+        FOR cur IN (
+            SELECT
+                a.acnumber
+            FROM
+                account a
+            WHERE
+                a.astatus = 'Active'
+                AND trunc(months_between(SYSDATE, a.aod)) > var_year * 12
+                AND a.custid IN (
+                    SELECT
+                        c.custid
+                    FROM
+                        customer c
+                    WHERE
+                        c.city = var_city
+                )
+        ) LOOP INSERT INTO demo_transdetails VALUES (
+            (
+                SELECT
+                    'T'
+                    || lpad(TO_CHAR(to_number(substr(MAX(tnumber), 2, 5)) + 1), 5, '0')
+                FROM
+                    demo_transdetails
+            ),
+            cur.acnumber,
+            SYSDATE,
+            'Wire Transfer',
+            'Deposit',
+            var_amount
+        );
+
+        
+
+        END LOOP;
+
+    END IF;
+
+    COMMIT;
+EXCEPTION
+    WHEN invalid_year THEN
+        dbms_output.put_line('INVALID YEAR! The given year has negative value  ' || TO_CHAR(var_year));
+    WHEN invalid_bonus THEN
+        dbms_output.put_line(' INVALID VALUE!! Sorry the amount is invalid  ' || TO_CHAR(var_amount));
+    WHEN OTHERS THEN
+        dbms_output.put_line('Error!');
+END;
