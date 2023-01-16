@@ -1,0 +1,8 @@
+create or replace TRIGGER IO_UPDATE_TRigger
+INSTEAD OF INSERT ON view1
+FOR EACH ROW
+BEGIN
+  UPDATE demo_account SET astatus = :new.astatus
+  where astatus = :old.astatus;
+
+END;
