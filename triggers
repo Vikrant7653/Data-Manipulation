@@ -1,0 +1,23 @@
+create or replace TRIGGER tr before
+    INSERT OR UPDATE ON demo
+    FOR EACH ROW
+DECLARE
+    v_user VARCHAR(100);
+    v_date TIMESTAMP;
+BEGIN
+
+    SELECT
+        user, CURRENT_TIMESTAMP
+    INTO v_user,v_date FROM dual;
+    IF inserting THEN
+      :new.ins_user := v_user;
+      :new.ins_time := v_date;
+
+
+    ELSIF updating THEN
+        :new.upd_user := v_user;
+        :new.upd_time := v_date;
+
+    END IF;
+
+END;
